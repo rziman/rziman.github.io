@@ -109,12 +109,12 @@
 
         // Load GLB model with dropdown selector
         const loader = new GLTFLoader();
-        const enterpriseGroup = new THREE.Group();
+        const modelGroup = new THREE.Group();
         let currentModel = null;
 
         function loadModel(modelPath) {
             if (currentModel) {
-                enterpriseGroup.remove(currentModel); // Remove previous model
+                modelGroup.remove(currentModel); // Remove previous model
             }
             loader.load(
                 modelPath,
@@ -123,11 +123,11 @@
                     const box = new THREE.Box3().setFromObject(currentModel);
                     const center = box.getCenter(new THREE.Vector3());
                     currentModel.position.sub(center); // Center the model
-                    enterpriseGroup.add(currentModel);
-                    enterpriseGroup.scale.set(0.5, 0.5, 0.5); // Miniature scale
-                    enterpriseGroup.position.set(0, 0, 0); // Center of holodeck
-                    if (!scene.children.includes(enterpriseGroup)) {
-                        scene.add(enterpriseGroup);
+                    modelGroup.add(currentModel);
+                    modelGroup.scale.set(0.5, 0.5, 0.5); // Miniature scale
+                    modelGroup.position.set(0, 0, 0); // Center of holodeck
+                    if (!scene.children.includes(modelGroup)) {
+                        scene.add(modelGroup);
                     }
                 },
                 (xhr) => {
@@ -135,13 +135,13 @@
                 },
                 (error) => {
                     console.error('An error occurred while loading the GLB model:', error);
-                    if (currentModel) enterpriseGroup.remove(currentModel);
+                    if (currentModel) modelGroup.remove(currentModel);
                     const fallbackGeometry = new THREE.BoxGeometry(1, 1, 1);
                     const fallbackMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
                     currentModel = new THREE.Mesh(fallbackGeometry, fallbackMaterial);
-                    enterpriseGroup.add(currentModel);
-                    if (!scene.children.includes(enterpriseGroup)) {
-                        scene.add(enterpriseGroup);
+                    modelGroup.add(currentModel);
+                    if (!scene.children.includes(modelGroup)) {
+                        scene.add(modelGroup);
                     }
                 }
             );
@@ -161,7 +161,7 @@
         const modelHeightSlider = document.getElementById('modelHeight');
         modelHeightSlider.addEventListener('input', (event) => {
             const height = parseFloat(event.target.value);
-            enterpriseGroup.position.y = height; // Adjust model's Y position
+            modelGroup.position.y = height; // Adjust model's Y position
         });
 
         // Animation loop
@@ -175,7 +175,7 @@
             wallMaterial.opacity = 0.6 + Math.sin(time) * 0.2;
 
             // Spin the model
-            enterpriseGroup.rotation.y += 0.01;
+            modelGroup.rotation.y += 0.01;
 
             controls.update();
             renderer.render(scene, camera);
