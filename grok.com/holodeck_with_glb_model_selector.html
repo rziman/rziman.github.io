@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Trek Holodeck - Three.js with Model Selector</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        canvas { display: block; }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        label { margin-right: 5px; }
+        select, input { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <label for="modelSelector">Select Model:</label>
+        <select id="modelSelector">
+            <option value="models/enterprise_ncc_1701_d.glb">Enterprise NCC-1701-D</option>
+            <option value="models/star_wars_x-wing.glb">Star Wars X-Wing</option>
+            <option value="models/star_wars_x-wing.glb.glb">F-16 Fighting Falcon</option>
+        </select>
+        <br>
+        <label for="modelHeight">Model Height:</label>
+        <input type="range" id="modelHeight" min="-10" max="10" value="0" step="0.1">
+    </div>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Camera position
+        camera.position.set(0, 5, 10);
+        camera.lookAt(0, 0, 0);
+
+        // OrbitControls for interaction
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 1, 100);
+        pointLight.position.set(10, 10, 10);
+        scene.add(pointLight);
+
+        // Holodeck grid material (yellow glowing lines)
+        const gridMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2, opacity: 0.8, transparent: true });
+
+        // Create the holodeck floor grid at the bottom of the walls
+        const gridSize = 20;
+        const gridGeometry = new THREE.BufferGeometry();
+        const gridVertices = [];
+        for (let i = -gridSize; i <= gridSize; i += 2) {
+            gridVertices.push(-gridSize, 0, i, gridSize, 0, i); // Horizontal lines
+            gridVertices.push(i, 0, -gridSize, i, 0, gridSize); // Vertical lines
+        }
+        gridGeometry.setAttribute('position', new THREE.Float32BufferAttribute(gridVertices, 3));
+        const floorGrid = new THREE.LineSegments(gridGeometry, gridMaterial);
+        floorGrid.position.y = -gridSize / 2; // Fixed at bottom of walls at y = -10
+        scene.add(floorGrid);
+
+        // Create walls with grid pattern
+        const wallMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2 });
+        const createWall = (x, z, rotationY) => {
+            const wallGeometry = new THREE.BufferGeometry();
+            const wallVertices = [];
+            for (let i = -gridSize; i <= gridSize; i += 2) {
+                wallVertices.push(i, -gridSize, 0, i, gridSize, 0); // Vertical lines
+                wallVertices.push(-gridSize, i, 0, gridSize, i, 0); // Horizontal lines
+            }
+            wallGeometry.setAttribute('position', new THREE.Float32BufferAttribute(wallVertices, 3));
+            const wall = new THREE.LineSegments(wallGeometry, wallMaterial);
+            wall.position.set(x, gridSize / 2, z);
+            wall.rotation.y = rotationY;
+            scene.add(wall);
+        };
+
+        // Add four walls
+        createWall(0, -gridSize, 0);        // Back wall
+        createWall(0, gridSize, Math.PI);   // Front wall
+        createWall(-gridSize, 0, Math.PI / 2); // Left wall
+        createWall(gridSize, 0, -Math.PI / 2); // Right wall
+
+        // Load GLB model with dropdown selector
+        const loader = new GLTFLoader();
+        const enterpriseGroup = new THREE.Group();
+        let currentModel = null;
+
+        function loadModel(modelPath) {
+            if (currentModel) {
+                enterpriseGroup.remove(currentModel); // Remove previous model
+            }
+            loader.load(
+                modelPath,
+                (gltf) => {
+                    currentModel = gltf.scene;
+                    const box = new THREE.Box3().setFromObject(currentModel);
+                    const center = box.getCenter(new THREE.Vector3());
+                    currentModel.position.sub(center); // Center the model
+                    enterpriseGroup.add(currentModel);
+                    enterpriseGroup.scale.set(0.5, 0.5, 0.5); // Miniature scale
+                    enterpriseGroup.position.set(0, 0, 0); // Center of holodeck
+                    if (!scene.children.includes(enterpriseGroup)) {
+                        scene.add(enterpriseGroup);
+                    }
+                },
+                (xhr) => {
+                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                },
+                (error) => {
+                    console.error('An error occurred while loading the GLB model:', error);
+                    if (currentModel) enterpriseGroup.remove(currentModel);
+                    const fallbackGeometry = new THREE.BoxGeometry(1, 1, 1);
+                    const fallbackMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                    currentModel = new THREE.Mesh(fallbackGeometry, fallbackMaterial);
+                    enterpriseGroup.add(currentModel);
+                    if (!scene.children.includes(enterpriseGroup)) {
+                        scene.add(enterpriseGroup);
+                    }
+                }
+            );
+        }
+
+        // Dropdown selector
+        const modelSelector = document.getElementById('modelSelector');
+        modelSelector.addEventListener('change', (event) => {
+            const selectedModel = event.target.value;
+            loadModel(selectedModel);
+        });
+
+        // Load initial model
+        loadModel(modelSelector.value);
+
+        // Slider for model height
+        const modelHeightSlider = document.getElementById('modelHeight');
+        modelHeightSlider.addEventListener('input', (event) => {
+            const height = parseFloat(event.target.value);
+            enterpriseGroup.position.y = height; // Adjust model's Y position
+        });
+
+        // Animation loop
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Pulse effect for the grid lines (floor and walls)
+            time += 0.05;
+            gridMaterial.opacity = 0.6 + Math.sin(time) * 0.2;
+            wallMaterial.opacity = 0.6 + Math.sin(time) * 0.2;
+
+            // Spin the model
+            enterpriseGroup.rotation.y += 0.01;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
