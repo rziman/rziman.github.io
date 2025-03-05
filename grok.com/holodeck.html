@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Trek Holodeck - Three.js</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Camera position
+        camera.position.set(0, 5, 10);
+        camera.lookAt(0, 0, 0);
+
+        // OrbitControls for interaction
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5); // Soft ambient light
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 1, 100);
+        pointLight.position.set(10, 10, 10);
+        scene.add(pointLight);
+
+        // Holodeck grid material (yellow glowing lines)
+        const gridMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2, opacity: 0.8, transparent: true });
+
+        // Create the holodeck floor grid
+        const gridSize = 20;
+        const gridGeometry = new THREE.BufferGeometry();
+        const gridVertices = [];
+        for (let i = -gridSize; i <= gridSize; i += 2) {
+            gridVertices.push(-gridSize, 0, i, gridSize, 0, i); // Horizontal lines
+            gridVertices.push(i, 0, -gridSize, i, 0, gridSize); // Vertical lines
+        }
+        gridGeometry.setAttribute('position', new THREE.Float32BufferAttribute(gridVertices, 3));
+        const floorGrid = new THREE.LineSegments(gridGeometry, gridMaterial);
+        scene.add(floorGrid);
+
+        // Create walls with grid pattern
+        const wallMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2 });
+        const createWall = (x, z, rotationY) => {
+            const wallGeometry = new THREE.BufferGeometry();
+            const wallVertices = [];
+            for (let i = -gridSize; i <= gridSize; i += 2) {
+                wallVertices.push(i, -gridSize, 0, i, gridSize, 0); // Vertical lines
+                wallVertices.push(-gridSize, i, 0, gridSize, i, 0); // Horizontal lines
+            }
+            wallGeometry.setAttribute('position', new THREE.Float32BufferAttribute(wallVertices, 3));
+            const wall = new THREE.LineSegments(wallGeometry, wallMaterial);
+            wall.position.set(x, gridSize / 2, z);
+            wall.rotation.y = rotationY;
+            scene.add(wall);
+        };
+
+        // Add four walls
+        createWall(0, -gridSize, 0);        // Back wall
+        createWall(0, gridSize, Math.PI);   // Front wall
+        createWall(-gridSize, 0, Math.PI / 2); // Left wall
+        createWall(gridSize, 0, -Math.PI / 2); // Right wall
+
+        // Animation loop
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Pulse effect for the grid lines
+            time += 0.05;
+            gridMaterial.opacity = 0.6 + Math.sin(time) * 0.2;
+            wallMaterial.opacity = 0.6 + Math.sin(time) * 0.2;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
