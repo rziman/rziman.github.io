@@ -106,6 +106,12 @@
             'models/enterprise_ncc_1701_d.glb', // Replace with your file path or URL
             (gltf) => {
                 const model = gltf.scene;
+
+                // Center the model by adjusting for its bounding box
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                model.position.sub(center); // Shift model to align its center with (0, 0, 0)
+
                 enterpriseGroup.add(model);
                 enterpriseGroup.scale.set(0.5, 0.5, 0.5); // Miniature scale
                 enterpriseGroup.position.set(0, 0, 0); // Center of holodeck
@@ -116,6 +122,14 @@
             },
             (error) => {
                 console.error('An error occurred while loading the GLB model:', error);
+                // Fallback: Add a red cube if the model fails to load
+                const fallbackGeometry = new THREE.BoxGeometry(1, 1, 1);
+                const fallbackMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                const fallbackCube = new THREE.Mesh(fallbackGeometry, fallbackMaterial);
+                enterpriseGroup.add(fallbackCube);
+                enterpriseGroup.scale.set(0.5, 0.5, 0.5);
+                enterpriseGroup.position.set(0, 0, 0);
+                scene.add(enterpriseGroup);
             }
         );
 
@@ -135,6 +149,9 @@
             time += 0.05;
             gridMaterial.opacity = 0.6 + Math.sin(time) * 0.2;
             wallMaterial.opacity = 0.6 + Math.sin(time) * 0.2;
+
+            // Spin the Enterprise-D
+            enterpriseGroup.rotation.y += 0.01;
 
             controls.update();
             renderer.render(scene, camera);
