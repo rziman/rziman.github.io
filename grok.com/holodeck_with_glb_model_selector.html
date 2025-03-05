@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Star Trek Holodeck - Three.js with Model Selector</title>
+    <title>Star Trek Holodeck - Three.js with Model Scale and Light</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; }
         canvas { display: block; }
@@ -32,6 +32,9 @@
         <br>
         <label for="modelHeight">Model Height:</label>
         <input type="range" id="modelHeight" min="-10" max="10" value="0" step="0.1">
+        <br>
+        <label for="modelScale">Model Scale:</label>
+        <input type="range" id="modelScale" min="0.1" max="2" value="0.5" step="0.1">
     </div>
     <script type="importmap">
         {
@@ -68,6 +71,13 @@
         const pointLight = new THREE.PointLight(0xffffff, 1, 100);
         pointLight.position.set(10, 10, 10);
         scene.add(pointLight);
+
+        // Directional light pointing at the model from above
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(0, 10, 0); // Above the center
+        directionalLight.target.position.set(0, 0, 0); // Pointing at the model
+        scene.add(directionalLight);
+        scene.add(directionalLight.target);
 
         // Holodeck grid material (yellow glowing lines)
         const gridMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2, opacity: 0.8, transparent: true });
@@ -124,11 +134,13 @@
                     const center = box.getCenter(new THREE.Vector3());
                     currentModel.position.sub(center); // Center the model
                     modelGroup.add(currentModel);
-                    modelGroup.scale.set(0.5, 0.5, 0.5); // Miniature scale
+                    modelGroup.scale.set(0.5, 0.5, 0.5); // Initial scale
                     modelGroup.position.set(0, 0, 0); // Center of holodeck
                     if (!scene.children.includes(modelGroup)) {
                         scene.add(modelGroup);
                     }
+                    // Update scale slider to match initial scale
+                    document.getElementById('modelScale').value = 0.5;
                 },
                 (xhr) => {
                     console.log((xhr.loaded / xhr.total * 100) + '% loaded');
@@ -162,6 +174,13 @@
         modelHeightSlider.addEventListener('input', (event) => {
             const height = parseFloat(event.target.value);
             modelGroup.position.y = height; // Adjust model's Y position
+        });
+
+        // Slider for model scale
+        const modelScaleSlider = document.getElementById('modelScale');
+        modelScaleSlider.addEventListener('input', (event) => {
+            const scale = parseFloat(event.target.value);
+            modelGroup.scale.set(scale, scale, scale); // Adjust model's scale
         });
 
         // Animation loop
