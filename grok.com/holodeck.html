@@ -3,13 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Star Trek Holodeck - Three.js</title>
+    <title>Star Trek Holodeck - Three.js with Floor Slider</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; }
         canvas { display: block; }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        label { margin-right: 5px; }
     </style>
 </head>
 <body>
+    <div id="controls">
+        <label for="floorHeight">Floor Height:</label>
+        <input type="range" id="floorHeight" min="-10" max="10" value="0" step="0.1">
+    </div>
     <script type="importmap">
         {
             "imports": {
@@ -39,7 +54,7 @@
         controls.dampingFactor = 0.05;
 
         // Lighting
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.5); // Soft ambient light
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
         scene.add(ambientLight);
         const pointLight = new THREE.PointLight(0xffffff, 1, 100);
         pointLight.position.set(10, 10, 10);
@@ -81,6 +96,13 @@
         createWall(0, gridSize, Math.PI);   // Front wall
         createWall(-gridSize, 0, Math.PI / 2); // Left wall
         createWall(gridSize, 0, -Math.PI / 2); // Right wall
+
+        // Slider for floor height
+        const floorHeightSlider = document.getElementById('floorHeight');
+        floorHeightSlider.addEventListener('input', (event) => {
+            const height = parseFloat(event.target.value);
+            floorGrid.position.y = height; // Adjust floor grid's Y position
+        });
 
         // Animation loop
         let time = 0;
